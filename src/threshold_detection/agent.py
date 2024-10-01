@@ -26,11 +26,12 @@ import logging
 import sys
 import uuid
 
-from volttron import utils
+import volttron.utils as utils
+from volttron.client.logs import setup_logging
 from volttron.client.messaging.health import STATUS_BAD, Status
 from volttron.client.vip.agent import RPC, Agent, Core, PubSub
 
-utils.setup_logging()
+setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '3.7'
 
