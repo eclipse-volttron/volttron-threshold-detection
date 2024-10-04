@@ -7,16 +7,13 @@ The agent subscribes to the topics listed in the configuration file and publishe
 value for the point above the max (if configured) or below the min (if configured) corresponding to the point in the
 configuration file.
 
-## Requires
+## Pre-requisite
 
-* python >= 3.10
-* volttron >= 10.0
-
-## Installation
-
-Before installing, VOLTTRON should be installed and running.  Its virtual environment should be active.
+Before installing this agent, VOLTTRON (>=11.0.0rc0) should be installed and running.  Its virtual environment should be active.
 Information on how to install of the VOLTTRON platform can be found
 [here](https://github.com/eclipse-volttron/volttron-core).
+
+## Installation
 
 Create a directory called `config` and use the change directory command to enter it.
 
