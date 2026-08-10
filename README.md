@@ -30,8 +30,8 @@ After entering the config directory, create a file called `threshold_detection_c
 The Threshold Detection agent supports observing individual point values from their respective topics or from a device's
     all publish.  Points to watch are configured as JSON key-value pairs as follows:
 
-* Key:  The key is the point topic for the point to watch, or the device's "all" topic if watching points from the all
-publish (i.e. "devices/campus/building/device/point" or "devices/campus/building/device/all" if using the all topic)
+* Key:  The key is the point topic for the point to watch, or the device's "all" or "multi" topic if watching points from the all or multi
+publish (i.e. "devices/campus/building/device/point" or "devices/campus/building/device/all" if using the all topic or "devices/campus/building/device/multi" if using the multi topic)
 
 * Value:  Using point topic: JSON object specifying the min ('threshold_min') and max ('threshold_max) threshold values
 for the point.  Only one of the thresholds are required, but both may be used.
@@ -57,7 +57,7 @@ for the point.  Only one of the thresholds are required, but both may be used.
 
     ```json
     {
-        "devices/fake/fakedevice/all": {
+        "devices/campus/building/fake/multi": {
             "OutsideAirTemperature1": {
                 "threshold_max": 60,
                 "threshold_min": 0
@@ -72,7 +72,8 @@ for the point.  Only one of the thresholds are required, but both may be used.
 After creating your configuration file. install and start the threshold detection agent in VOLTTRON.
 
 ```shell
-vctl install volttron-threshold-detection --agent-config threshold_detection_config.json --vip-identity platform.threshold_detection --start
+vctl install volttron-threshold-detection --vip-identity platform.threshold_detection --start
+vctl config store platform.threshold_detection config path/to/config
 ```
 
 View the status of the installed agent.

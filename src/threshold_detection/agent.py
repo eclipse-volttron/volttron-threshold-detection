@@ -30,7 +30,7 @@ from volttron import utils
 from volttron.client.messaging.health import STATUS_BAD, Status
 from volttron.client.vip.agent import RPC, Agent, Core, PubSub
 
-utils.setup_logging()
+
 _log = logging.getLogger(__name__)
 __version__ = '3.7'
 
@@ -98,8 +98,9 @@ class ThresholdDetectionAgent(Agent):
             self.config_topics[config_name].add(topic)
             _log.info(f"Subscribing to {topic}")
 
-            if topic.startswith("devices/") and topic.endswith("/all"):
-                self._create_device_subscription(topic, values)
+            if topic.startswith("devices/"):
+                if topic.endswith("/all") or topic.endswith("/multi"):
+                    self._create_device_subscription(topic, values)
             else:
                 self._create_standard_subscription(topic, values)
 
@@ -149,7 +150,7 @@ class ThresholdDetectionAgent(Agent):
         def callback(peer, sender, bus, topic, headers, data):
             try:
                 float(data)
-            except ValueError:
+            except (ValueError, TypeError):
                 return
 
             if threshold_max is not None and data > threshold_max:
