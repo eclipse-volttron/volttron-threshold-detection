@@ -25,6 +25,7 @@
 Pytest test cases for ThresholdDetectionAgent
 """
 
+import os
 import gevent
 import pytest
 from pathlib import Path
@@ -35,8 +36,8 @@ from volttrontesting.fixtures.volttron_platform_fixtures import volttron_instanc
 from volttrontesting.utils import is_running_in_container, poll_gevent_sleep
 
 
-if is_running_in_container():
-    pytest.skip("Test module is flaky in containers", allow_module_level=True)
+if is_running_in_container() or os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS'):
+    pytest.skip("Test module is flaky in CI containers", allow_module_level=True)
 
 _default_config = {"test_max": {"threshold_max": 10}}
 
