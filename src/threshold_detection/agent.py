@@ -119,12 +119,15 @@ class ThresholdDetectionAgent(Agent):
             threshold_max = values.get('threshold_max')
             threshold_min = values.get('threshold_min')
 
-            def callback(peer, sender, bus, topic, headers, message):
+            def callback(peer, sender, bus, topic, headers, message,
+                         point=point, threshold_max=threshold_max, threshold_min=threshold_min):
+                if not message or not isinstance(message, (list, tuple)) or not isinstance(message[0], dict):
+                    return
                 data = message[0].get(point)
 
                 try:
                     float(data)
-                except ValueError:
+                except (ValueError, TypeError):
                     return
 
                 if threshold_max is not None and data > threshold_max:
@@ -166,10 +169,15 @@ class ThresholdDetectionAgent(Agent):
 
         Unsubscribes from topics in a deleted configuration.
         """
-        topics = self.config_topics.pop(config_name)
+        topics = self.config_topics.pop(config_name, set())
         for t in topics:
             _log.info(f"Unsubscribing from {t}")
-            self.vip.pubsub.unsubscribe(peer='pubsub', prefix=t, callback=None).get()
+            try:
+                res = self.vip.pubsub.unsubscribe(peer='pubsub', prefix=t, callback=None)
+                if hasattr(res, 'get'):
+                    res.get()
+            except Exception as e:
+                _log.warning(f"Error unsubscribing from {t}: {e}")
 
     def _config_mod(self, *args):
         """

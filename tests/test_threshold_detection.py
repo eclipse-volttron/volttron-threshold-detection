@@ -33,8 +33,6 @@ from volttron.client.vip.agent import Agent, PubSub
 from volttron.utils import jsonapi
 from volttrontesting.fixtures.volttron_platform_fixtures import volttron_instance
 from volttrontesting.utils import is_running_in_container, poll_gevent_sleep
-from volttron.types import ServiceInterface
-from volttron.services.routing import RoutingService
 
 
 if is_running_in_container():
@@ -52,6 +50,12 @@ _test_config = {
     "devices/all": {
         "point": {
             "threshold_max": 10,
+            "threshold_min": 0,
+        }
+    },
+    "devices/campus/building/fake/multi": {
+        "OutsideAirTemperature1": {
+            "threshold_max": 60,
             "threshold_min": 0,
         }
     }
@@ -99,7 +103,6 @@ def threshold_tester_agent(volttron_instance):
     """
     agent_path = Path(__file__).parents[1]
 
-    print("ADDRESS IS: ", volttron_instance.vip_address)
     threshold_detection_uuid = volttron_instance.install_agent(agent_dir=agent_path,
                                                                config_file=_test_config,
                                                                vip_identity="platform.thresholddetection",
@@ -218,6 +221,25 @@ def test_device_publish(threshold_tester_agent):
         assert poll_gevent_sleep(5, check)
     finally:
         threshold_tester_agent.clear_keys()
+
+
+def test_device_publish_multi(threshold_tester_agent):
+    gevent.sleep(2)
+    threshold_tester_agent.vip.pubsub.publish('pubsub', 'devices/campus/building/fake/multi', headers={}, message=[{'OutsideAirTemperature1': 75}]).get()
+    gevent.sleep(0.2)
+    check = lambda: threshold_tester_agent.seen_alert_keys == set(['devices/campus/building/fake/multi'])
+    try:
+        assert poll_gevent_sleep(5, check)
+    finally:
+        threshold_tester_agent.clear_keys()
+
+
+def test_invalid_type_handling(threshold_tester_agent):
+    gevent.sleep(1)
+    threshold_tester_agent.vip.pubsub.publish('pubsub', 'test_max', headers={}, message="non-numeric-value").get()
+    threshold_tester_agent.vip.pubsub.publish('pubsub', 'test_max', headers={}, message={'nested': 'dict'}).get()
+    gevent.sleep(1)
+    assert len(threshold_tester_agent.seen_alert_keys) == 0
 
 
 def test_remove_from_config_store(threshold_tester_agent):

@@ -22,6 +22,7 @@
 # ===----------------------------------------------------------------------===
 # }}}
 
+import os
 import logging
 import sys
 import unittest
@@ -37,27 +38,33 @@ from volttrontesting.utils import AgentMock
 
 from threshold_detection.agent import ThresholdDetectionAgent
 
-utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '3.7'
 
 
 class TestAgent(unittest.TestCase):
 
-    def setUp(self):
-        ThresholdDetectionAgent.__bases__ = (AgentMock.imitate(Agent, Agent()), )
+    def _create_agent(self, config='../thresholddetection.config'):
+        agent = ThresholdDetectionAgent.__new__(ThresholdDetectionAgent)
+        agent.vip = Mock()
+        agent.config_topics = {}
+        agent.vip.config.set_default("config", config)
+        agent.vip.config.subscribe(agent._config_add, actions="NEW", pattern="config")
+        agent.vip.config.subscribe(agent._config_del, actions="DELETE", pattern="config")
+        agent.vip.config.subscribe(agent._config_mod, actions="UPDATE", pattern="config")
+        return agent
 
     def test_config(self):
-        agent = ThresholdDetectionAgent('..\\thresholddetection.config')
+        agent = self._create_agent('..\\thresholddetection.config')
         assert agent is not None
-        agent.vip.assert_has_calls(agent.vip.config.set_default('config', 'thresholddetection.config'))
-        agent.vip.assert_has_calls(agent.vip.config.subscribe(agent._config_add, actions="NEW", pattern="config"))
-        agent.vip.assert_has_calls(agent.vip.config.subscribe(agent._config_del, actions="DELETE", pattern="config"))
-        agent.vip.assert_has_calls(agent.vip.config.subscribe(agent._config_mod, actions="UPDATE", pattern="config"))
+        agent.vip.config.set_default.assert_called_with('config', '..\\thresholddetection.config')
+        agent.vip.config.subscribe.assert_any_call(agent._config_add, actions="NEW", pattern="config")
+        agent.vip.config.subscribe.assert_any_call(agent._config_del, actions="DELETE", pattern="config")
+        agent.vip.config.subscribe.assert_any_call(agent._config_mod, actions="UPDATE", pattern="config")
 
     def test_alert_high(self):
         all_calls = []
-        agent = ThresholdDetectionAgent('../thresholddetection.config')
+        agent = self._create_agent('../thresholddetection.config')
         agent._alert('datalogger/log/platform/cpu_percent', 99, 100)
         for call in agent.vip.mock_calls:
             all_calls.append(call)
@@ -65,7 +72,7 @@ class TestAgent(unittest.TestCase):
 
     def test_alert_low(self):
         all_calls = []
-        agent = ThresholdDetectionAgent('../thresholddetection.config')
+        agent = self._create_agent('../thresholddetection.config')
         agent._alert('datalogger/log/platform/cpu_percent', 99, 90)
         for call in agent.vip.mock_calls:
             all_calls.append(call)

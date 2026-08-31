@@ -25,5 +25,38 @@
 """Configuration for the pytest test suite."""
 
 import sys
+from pathlib import Path
+import psutil
+import pytest
+from volttrontesting.fixtures.volttron_platform_fixtures import build_wrapper, cleanup_wrapper
+from volttrontesting.utils import get_rand_vip
+
 if "src" not in sys.path:
     sys.path.insert(0, "src")
+
+
+@pytest.fixture(
+    scope="module",
+    params=[
+        dict(messagebus='zmq', ssl_auth=False),
+    ])
+def volttron_instance(request, **kwargs):
+    """Fixture that returns a single instance of volttron platform for testing with zmq messagebus."""
+    address = kwargs.pop("address", get_rand_vip())
+    wrapper = build_wrapper(address,
+                            messagebus=request.param['messagebus'],
+                            ssl_auth=request.param['ssl_auth'],
+                            **kwargs)
+    wrapper.startup_platform()
+    wrapper_pid = wrapper.p_process.pid if wrapper.p_process else None
+
+    try:
+        yield wrapper
+    except Exception as ex:
+        print(ex.args)
+    finally:
+        cleanup_wrapper(wrapper)
+        if not wrapper.debug_mode:
+            assert not Path(wrapper.volttron_home).exists()
+        if wrapper_pid and psutil.pid_exists(wrapper_pid):
+            psutil.Process(wrapper_pid).kill()
