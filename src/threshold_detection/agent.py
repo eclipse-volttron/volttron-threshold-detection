@@ -30,7 +30,7 @@ from volttron import utils
 from volttron.client.messaging.health import STATUS_BAD, Status
 from volttron.client.vip.agent import RPC, Agent, Core, PubSub
 
-utils.setup_logging()
+
 _log = logging.getLogger(__name__)
 __version__ = '3.7'
 
@@ -98,8 +98,9 @@ class ThresholdDetectionAgent(Agent):
             self.config_topics[config_name].add(topic)
             _log.info(f"Subscribing to {topic}")
 
-            if topic.startswith("devices/") and topic.endswith("/all"):
-                self._create_device_subscription(topic, values)
+            if topic.startswith("devices/"):
+                if topic.endswith("/all") or topic.endswith("/multi"):
+                    self._create_device_subscription(topic, values)
             else:
                 self._create_standard_subscription(topic, values)
 
@@ -118,12 +119,15 @@ class ThresholdDetectionAgent(Agent):
             threshold_max = values.get('threshold_max')
             threshold_min = values.get('threshold_min')
 
-            def callback(peer, sender, bus, topic, headers, message):
+            def callback(peer, sender, bus, topic, headers, message,
+                         point=point, threshold_max=threshold_max, threshold_min=threshold_min):
+                if not message or not isinstance(message, (list, tuple)) or not isinstance(message[0], dict):
+                    return
                 data = message[0].get(point)
 
                 try:
                     float(data)
-                except ValueError:
+                except (ValueError, TypeError):
                     return
 
                 if threshold_max is not None and data > threshold_max:
@@ -149,7 +153,7 @@ class ThresholdDetectionAgent(Agent):
         def callback(peer, sender, bus, topic, headers, data):
             try:
                 float(data)
-            except ValueError:
+            except (ValueError, TypeError):
                 return
 
             if threshold_max is not None and data > threshold_max:
@@ -165,10 +169,15 @@ class ThresholdDetectionAgent(Agent):
 
         Unsubscribes from topics in a deleted configuration.
         """
-        topics = self.config_topics.pop(config_name)
+        topics = self.config_topics.pop(config_name, set())
         for t in topics:
             _log.info(f"Unsubscribing from {t}")
-            self.vip.pubsub.unsubscribe(peer='pubsub', prefix=t, callback=None).get()
+            try:
+                res = self.vip.pubsub.unsubscribe(peer='pubsub', prefix=t, callback=None)
+                if hasattr(res, 'get'):
+                    res.get()
+            except Exception as e:
+                _log.warning(f"Error unsubscribing from {t}: {e}")
 
     def _config_mod(self, *args):
         """

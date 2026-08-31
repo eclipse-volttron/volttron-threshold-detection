@@ -22,8 +22,9 @@
 # ===----------------------------------------------------------------------===
 # }}}
 
-"""Configuration for the pytest test suite."""
-
+import os
 import sys
+from volttrontesting.fixtures.volttron_platform_fixtures import *
+
 if "src" not in sys.path:
     sys.path.insert(0, "src")
